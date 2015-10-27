@@ -4,7 +4,7 @@
 * 无需任何权限
 * 兼容MIUI系统
 
-关于Windown Manager无权限详解请【[点击](http://www.jianshu.com/p/167fd5f47d5c)】
+关于Android无需权限显示悬浮窗,请【[点击](http://www.jianshu.com/p/167fd5f47d5c)】
 
 DEMO apk文件【[下载](https://raw.githubusercontent.com/pengjianbo/FloatViewFinal/master/FloatViewFinal-Sample.apk)】
 
