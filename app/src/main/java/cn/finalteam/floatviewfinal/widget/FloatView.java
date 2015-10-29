@@ -48,7 +48,8 @@ import java.util.TimerTask;
  */
 public class FloatView extends FrameLayout implements OnTouchListener {
 
-    private final int HANDLER_TYPE_TIMER = 100;
+    private final int HANDLER_TYPE_HIDE_LOGO = 100;//隐藏LOGO
+    private final int HANDLER_TYPE_CANCEL_ANIM = 101;//退出动画
 
     private WindowManager.LayoutParams mWmParams;
     private WindowManager mWindowManager;
@@ -69,32 +70,31 @@ public class FloatView extends FrameLayout implements OnTouchListener {
     private int mScreenWidth;
     private int mScreenHeight;
     private boolean mDraging;
+    private boolean mShowLoader = true;
 
     private Timer mTimer;
     private TimerTask mTimerTask;
 
     final Handler mTimerHandler = new Handler() {
         public void handleMessage(Message msg) {
-            if ( msg.what == HANDLER_TYPE_TIMER ) {
+            if ( msg.what == HANDLER_TYPE_HIDE_LOGO ) {
                 // 比如隐藏悬浮框
                 if (mCanHide) {
                     mCanHide = false;
                     if (mIsRight) {
-                        mIvFloatLogo.setImageResource(ResourceUtils.getDrawableId(
-                                mContext, "pj_image_float_right"));
-                        mIvFloatLoader.clearAnimation();
-                        mIvFloatLoader.setVisibility(View.GONE);
+                        mIvFloatLogo.setImageResource(ResourceUtils.getDrawableId(mContext, "pj_image_float_right"));
                     } else {
-                        mIvFloatLogo.setImageResource(ResourceUtils.getDrawableId(
-                                mContext, "pj_image_float_left"));
-                        mIvFloatLoader.clearAnimation();
-                        mIvFloatLoader.setVisibility(View.GONE);
+                        mIvFloatLogo.setImageResource(ResourceUtils.getDrawableId(mContext, "pj_image_float_left"));
                     }
                     mWmParams.alpha = 0.7f;
                     mWindowManager.updateViewLayout(FloatView.this, mWmParams);
                     refreshFloatMenu(mIsRight);
                     mLlFloatMenu.setVisibility(View.GONE);
                 }
+            } else if ( msg.what == HANDLER_TYPE_CANCEL_ANIM ) {
+                mIvFloatLoader.clearAnimation();
+                mIvFloatLoader.setVisibility(View.GONE);
+                mShowLoader = false;
             }
             super.handleMessage(msg);
         }
@@ -140,6 +140,8 @@ public class FloatView extends FrameLayout implements OnTouchListener {
         mWmParams.height = LayoutParams.WRAP_CONTENT;
         addView(createView(mContext));
         mWindowManager.addView(this, mWmParams);
+
+        mTimer = new Timer();
 
         hide();
     }
@@ -227,9 +229,9 @@ public class FloatView extends FrameLayout implements OnTouchListener {
                 }
             }
         });
-        mRootFloatView.measure(MeasureSpec.makeMeasureSpec(0,
-                MeasureSpec.UNSPECIFIED), MeasureSpec
-                .makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+        mRootFloatView.measure(View.MeasureSpec.makeMeasureSpec(0,
+                View.MeasureSpec.UNSPECIFIED), View.MeasureSpec
+                .makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
 
 
         return mRootFloatView;
@@ -250,6 +252,7 @@ public class FloatView extends FrameLayout implements OnTouchListener {
                         mContext, "pj_image_float_logo"));
                 mWmParams.alpha = 1f;
                 mWindowManager.updateViewLayout(FloatView.this, mWmParams);
+                mDraging = false;
                 break;
             case MotionEvent.ACTION_MOVE:
                 float mMoveStartX = event.getX();
@@ -257,6 +260,7 @@ public class FloatView extends FrameLayout implements OnTouchListener {
                 // 如果移动量大于3才移动
                 if (Math.abs(mTouchStartX - mMoveStartX) > 3
                         && Math.abs(mTouchStartY - mMoveStartY) > 3) {
+                    mDraging = true;
                     // 更新浮动窗口位置参数
                     mWmParams.x = (int) (x - mTouchStartX);
                     mWmParams.y = (int) (y - mTouchStartY);
@@ -264,7 +268,7 @@ public class FloatView extends FrameLayout implements OnTouchListener {
                     mLlFloatMenu.setVisibility(View.GONE);
                     return false;
                 }
-                mDraging = true;
+
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
@@ -283,18 +287,12 @@ public class FloatView extends FrameLayout implements OnTouchListener {
                 mWindowManager.updateViewLayout(this, mWmParams);
                 // 初始化
                 mTouchStartX = mTouchStartY = 0;
-
-                mDraging = false;
                 break;
         }
         return false;
     }
 
     private void removeTimerTask() {
-        if (mTimer != null) {
-            mTimer.cancel();
-            mTimer = null;
-        }
         if (mTimerTask != null) {
             mTimerTask.cancel();
             mTimerTask = null;
@@ -331,11 +329,18 @@ public class FloatView extends FrameLayout implements OnTouchListener {
             mWindowManager.updateViewLayout(FloatView.this, mWmParams);
             mRootFloatView.setVisibility(View.VISIBLE);
             timerForHide();
-            if (mIvFloatLoader.getVisibility() == View.VISIBLE) {
+            if (mShowLoader) {
+                mShowLoader = false;
                 Animation rotaAnimation = AnimationUtils.loadAnimation(mContext,
                         ResourceUtils.getAnimId(mContext, "pj_loading_anim"));
                 rotaAnimation.setInterpolator(new LinearInterpolator());
                 mIvFloatLoader.startAnimation(rotaAnimation);
+                mTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        mTimerHandler.sendEmptyMessage(HANDLER_TYPE_CANCEL_ANIM);
+                    }
+                }, 3000);
             }
         }
     }
@@ -346,10 +351,10 @@ public class FloatView extends FrameLayout implements OnTouchListener {
      */
     private void refreshFloatMenu(boolean right) {
         if (right) {
-            LayoutParams paramsFloatImage = (LayoutParams) mIvFloatLogo.getLayoutParams();
+            FrameLayout.LayoutParams paramsFloatImage = (FrameLayout.LayoutParams) mIvFloatLogo.getLayoutParams();
             paramsFloatImage.gravity = Gravity.RIGHT;
             mIvFloatLogo.setLayoutParams(paramsFloatImage);
-            LayoutParams paramsFlFloat = (LayoutParams) mFlFloatLogo.getLayoutParams();
+            FrameLayout.LayoutParams paramsFlFloat = (FrameLayout.LayoutParams) mFlFloatLogo.getLayoutParams();
             paramsFlFloat.gravity = Gravity.RIGHT;
             mFlFloatLogo.setLayoutParams(paramsFlFloat);
 
@@ -365,11 +370,11 @@ public class FloatView extends FrameLayout implements OnTouchListener {
             paramsMenuFb.leftMargin = padding;
             mTvFeedback.setLayoutParams(paramsMenuFb);
         } else {
-            LayoutParams params = (LayoutParams) mIvFloatLogo.getLayoutParams();
+            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) mIvFloatLogo.getLayoutParams();
             params.setMargins(0, 0, 0, 0);
             params.gravity = Gravity.LEFT;
             mIvFloatLogo.setLayoutParams(params);
-            LayoutParams paramsFlFloat = (LayoutParams) mFlFloatLogo.getLayoutParams();
+            FrameLayout.LayoutParams paramsFlFloat = (FrameLayout.LayoutParams) mFlFloatLogo.getLayoutParams();
             paramsFlFloat.gravity = Gravity.LEFT;
             mFlFloatLogo.setLayoutParams(paramsFlFloat);
 
@@ -393,7 +398,6 @@ public class FloatView extends FrameLayout implements OnTouchListener {
      */
     private void timerForHide() {
         mCanHide = true;
-        mTimer = new Timer();
 
         //结束任务
         if (mTimerTask != null) {
@@ -407,7 +411,7 @@ public class FloatView extends FrameLayout implements OnTouchListener {
             @Override
             public void run() {
                 Message message = mTimerHandler.obtainMessage();
-                message.what = HANDLER_TYPE_TIMER;
+                message.what = HANDLER_TYPE_HIDE_LOGO;
                 mTimerHandler.sendMessage(message);
             }
         };
@@ -435,6 +439,10 @@ public class FloatView extends FrameLayout implements OnTouchListener {
         hide();
         removeFloatView();
         removeTimerTask();
+        if (mTimer != null) {
+            mTimer.cancel();
+            mTimer = null;
+        }
         try {
             mTimerHandler.removeMessages(1);
         } catch (Exception e){}
