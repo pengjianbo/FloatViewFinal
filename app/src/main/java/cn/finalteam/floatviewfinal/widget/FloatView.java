@@ -55,7 +55,7 @@ public class FloatView extends FrameLayout implements OnTouchListener {
     private WindowManager mWindowManager;
     private Context mContext;
 
-    private View mRootFloatView;
+    //private View mRootFloatView;
     private ImageView mIvFloatLogo;
     private ImageView mIvFloatLoader;
     private LinearLayout mLlFloatMenu;
@@ -142,7 +142,6 @@ public class FloatView extends FrameLayout implements OnTouchListener {
         mWindowManager.addView(this, mWmParams);
 
         mTimer = new Timer();
-
         hide();
     }
 
@@ -189,16 +188,16 @@ public class FloatView extends FrameLayout implements OnTouchListener {
     private View createView(final Context context) {
         LayoutInflater inflater = LayoutInflater.from(context);
         // 从布局文件获取浮动窗口视图
-        mRootFloatView = inflater.inflate(ResourceUtils.getLayoutId(context, "pj_widget_float_view"), null);
-        mFlFloatLogo = (FrameLayout) mRootFloatView.findViewById(ResourceUtils.getId(context, "pj_float_view"));
+        View rootFloatView = inflater.inflate(ResourceUtils.getLayoutId(context, "pj_widget_float_view"), null);
+        mFlFloatLogo = (FrameLayout) rootFloatView.findViewById(ResourceUtils.getId(context, "pj_float_view"));
 
-        mIvFloatLogo = (ImageView) mRootFloatView.findViewById(ResourceUtils.getId(context,
+        mIvFloatLogo = (ImageView) rootFloatView.findViewById(ResourceUtils.getId(context,
                 "pj_float_view_icon_imageView"));
-        mIvFloatLoader = (ImageView) mRootFloatView.findViewById(ResourceUtils.getId(
+        mIvFloatLoader = (ImageView) rootFloatView.findViewById(ResourceUtils.getId(
                 context, "pj_float_view_icon_notify"));
-        mLlFloatMenu = (LinearLayout) mRootFloatView.findViewById(ResourceUtils.getId(
+        mLlFloatMenu = (LinearLayout) rootFloatView.findViewById(ResourceUtils.getId(
                 context, "ll_menu"));
-        mTvAccount = (TextView) mRootFloatView.findViewById(ResourceUtils.getId(
+        mTvAccount = (TextView) rootFloatView.findViewById(ResourceUtils.getId(
                 context, "tv_account"));
         mTvAccount.setOnClickListener(new OnClickListener() {
             @Override
@@ -207,7 +206,7 @@ public class FloatView extends FrameLayout implements OnTouchListener {
                 openUserCenter();
             }
         });
-        mTvFeedback = (TextView) mRootFloatView.findViewById(ResourceUtils.getId(
+        mTvFeedback = (TextView) rootFloatView.findViewById(ResourceUtils.getId(
                 context, "tv_feedback"));
         mTvFeedback.setOnClickListener(new OnClickListener() {
             @Override
@@ -216,8 +215,8 @@ public class FloatView extends FrameLayout implements OnTouchListener {
                 mLlFloatMenu.setVisibility(View.GONE);
             }
         });
-        mRootFloatView.setOnTouchListener(this);
-        mRootFloatView.setOnClickListener(new OnClickListener() {
+        rootFloatView.setOnTouchListener(this);
+        rootFloatView.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if ( !mDraging ) {
@@ -229,12 +228,12 @@ public class FloatView extends FrameLayout implements OnTouchListener {
                 }
             }
         });
-        mRootFloatView.measure(View.MeasureSpec.makeMeasureSpec(0,
+        rootFloatView.measure(View.MeasureSpec.makeMeasureSpec(0,
                 View.MeasureSpec.UNSPECIFIED), View.MeasureSpec
                 .makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
 
 
-        return mRootFloatView;
+        return rootFloatView;
     }
 
     @Override
@@ -251,7 +250,7 @@ public class FloatView extends FrameLayout implements OnTouchListener {
                 mIvFloatLogo.setImageResource(ResourceUtils.getDrawableId(
                         mContext, "pj_image_float_logo"));
                 mWmParams.alpha = 1f;
-                mWindowManager.updateViewLayout(FloatView.this, mWmParams);
+                mWindowManager.updateViewLayout(this, mWmParams);
                 mDraging = false;
                 break;
             case MotionEvent.ACTION_MOVE:
@@ -301,10 +300,9 @@ public class FloatView extends FrameLayout implements OnTouchListener {
 
     private void removeFloatView() {
         try {
-            if (mRootFloatView != null) {
-                mWindowManager.removeView(mRootFloatView);
-            }
+            mWindowManager.removeView(this);
         } catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -312,24 +310,27 @@ public class FloatView extends FrameLayout implements OnTouchListener {
      * 隐藏悬浮窗
      */
     public void hide() {
-        if (mRootFloatView != null) {
-            mRootFloatView.setVisibility(View.GONE);
-            removeTimerTask();
-        }
+        setVisibility(View.GONE);
+        Message message = mTimerHandler.obtainMessage();
+        message.what = HANDLER_TYPE_HIDE_LOGO;
+        mTimerHandler.sendMessage(message);
+        removeTimerTask();
     }
 
     /**
      * 显示悬浮窗
      */
     public void show() {
-        if (mRootFloatView != null) {
-            mIvFloatLogo.setImageResource(ResourceUtils.getDrawableId(
-                    mContext, "pj_image_float_logo"));
-            mWmParams.alpha = 1f;
-            mWindowManager.updateViewLayout(FloatView.this, mWmParams);
-            mRootFloatView.setVisibility(View.VISIBLE);
-            timerForHide();
+        if (getVisibility() != View.VISIBLE) {
+            setVisibility(View.VISIBLE);
             if (mShowLoader) {
+                mIvFloatLogo.setImageResource(ResourceUtils.getDrawableId(
+                        mContext, "pj_image_float_logo"));
+                mWmParams.alpha = 1f;
+                mWindowManager.updateViewLayout(this, mWmParams);
+
+                timerForHide();
+
                 mShowLoader = false;
                 Animation rotaAnimation = AnimationUtils.loadAnimation(mContext,
                         ResourceUtils.getAnimId(mContext, "pj_loading_anim"));

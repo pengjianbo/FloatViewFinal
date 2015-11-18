@@ -20,9 +20,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
-import android.support.annotation.Nullable;
 import cn.finalteam.floatviewfinal.widget.FloatView;
-import java.lang.ref.WeakReference;
 
 /**
  * Desction:Float view service
@@ -32,24 +30,17 @@ import java.lang.ref.WeakReference;
 public class FloatViewService extends Service{
 
     private FloatView mFloatView;
-    private IBinder mFloatViewServiceBinder;
 
-    @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return mFloatViewServiceBinder;
+        return new FloatViewServiceBinder();
     }
 
+
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        if (mFloatView != null) {
-            return START_STICKY;
-        }
-
+    public void onCreate() {
+        super.onCreate();
         mFloatView = new FloatView(this);
-        mFloatViewServiceBinder = new FloatViewServiceBinder(this);
-
-        return START_REDELIVER_INTENT;
     }
 
     public void showFloat() {
@@ -64,24 +55,22 @@ public class FloatViewService extends Service{
         }
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
+    public void destroyFloat() {
         if ( mFloatView != null ) {
             mFloatView.destroy();
         }
+        mFloatView = null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        destroyFloat();
     }
 
     public class FloatViewServiceBinder extends Binder {
-
-        private final WeakReference<FloatViewService> mService;
-
-        FloatViewServiceBinder(FloatViewService service) {
-            mService = new WeakReference<>(service);
-        }
-
         public FloatViewService getService() {
-            return mService.get();
+            return FloatViewService.this;
         }
     }
 }

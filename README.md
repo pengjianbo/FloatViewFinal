@@ -1,10 +1,8 @@
 # FloatViewFinal简介
 泡椒网游戏SDK Float View（悬浮窗）实现
+(兼容MIUI系统)
 
-* 无需任何权限
-* 兼容MIUI系统
-
-关于Android无需权限显示悬浮窗,请【[点击](http://www.jianshu.com/p/167fd5f47d5c)】
+关于悬浮窗更详细资料,请【[点击](http://www.jianshu.com/p/167fd5f47d5c)】
 
 DEMO apk文件【[下载](https://raw.githubusercontent.com/pengjianbo/FloatViewFinal/master/FloatViewFinal-Sample.apk)】
 
